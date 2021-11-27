@@ -1,0 +1,44 @@
+{
+  "name": "generals-bot",
+  "version": "0.0.1",
+  "description": "A bot for bot.generals.io",
+  "main": "index.html",
+  "author": "skye2k2",
+  "keywords": [
+    "generals.io",
+    "bot",
+    "node.js",
+    "javascript",
+    "example"
+  ],
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "dependencies": {
+    "grommet": "^2.7.11",
+    "react": "^16.11.0",
+    "react-dom": "^16.11.0",
+    "react-router-dom": "^5.1.2",
+    "react-scripts": "^3.2.0",
+    "socket.io-client": "^2.3.0",
+    "styled-components": "^4.4.1"
+  },
+  "devDependencies": {}
+}
