@@ -35,6 +35,7 @@ export function Quit() {
 	document.getElementById("log").append("\nReplay:\n" + game.replay_url);
 	console.log("Game over. Halting execution until next game begin.");
 	game.gameOver = true;
+	forceStartFlag = false;
 	socket.emit('leave_game'); // Leave active game
 	// socket.emit('cancel'); // Leave queue
 }
@@ -161,13 +162,15 @@ socket.on("game_update", function(rawData) {
 	// For example, a tile with value 1 is owned by the player with playerIndex = 1.
   game.terrain = game.map.slice(game.mapSize + 2, game.mapSize + 2 + game.mapSize);
 
-	// There are 2 client ticks per server tick, so skip every other one.
-	let recalculatedTurn = Math.floor(rawData.turn/2);
+	game.turn = rawData.turn;
+	// There are 2 client ticks per server tick, so skip every other one for slower execution.
+	// let recalculatedTurn = Math.floor(rawData.turn/2);
 
-	if (game.turn !== Math.floor(rawData.turn/2)) {
-		game.turn = recalculatedTurn;
+	// if (game.turn !== recalculatedTurn) {
+	// 	game.turn = recalculatedTurn;
 		ai.move(game);
-	}
+	// }
+
 });
 
 

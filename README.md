@@ -1,6 +1,6 @@
 # generals.io Murderbot
 
-This is a bot for [bot.generals.io](http://bot.generals.io). 
+This is a bot for [bot.generals.io](http://bot.generals.io).
 <!-- Read the tutorial associated with making a bot at [dev.generals.io/api#tutorial](http://dev.generals.io/api#tutorial). -->
 
 ## How to run:
@@ -14,7 +14,7 @@ export default {
   BOT_USER_ID_1: '{userIdFromLocalStorageFromIncognitoWindow}',
   BOT_USERNAME_1: '[Bot]botName',
   BOT_USER_ID_2: '{userIdFromLocalStorageFromIncognitoWindow}',
-  // Set up multiple usernames/IDs so you can open a second tab and go to 
+  // Set up multiple usernames/IDs so you can open a second tab and go to
   // /play/2, /play/3, etc. and have multiple bots join a game and play each other.
   ...
 }
@@ -40,6 +40,7 @@ export default {
 <summary>Stages of Development Replays:</summary>
 
 - [most recent failure]
+- https://bot.generals.io/replays/BgvSl-mtK (2x speed, now explores without backtracking so much and uses most-recent army when possible)
 - https://bot.generals.io/replays/SlYu2rhuY (now conquers cities)
 - https://bot.generals.io/replays/SeHYrHndY (doesn't just shift armies back and forth)
 - Emphasize capture of empty spaces (opening 6 turns are optimal)

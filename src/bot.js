@@ -4,6 +4,7 @@
  * - If there are large armies near my general (or if my general armies ever decrease without the cause being my active cursor)
  * - If one of my neighbors gets conquered
  * - If my general is discovered (someone explores or penetrates to a space next to my general--if there is *ever* a color not part of my team next to my general)
+ * - If there is a visible city with < 10 troops
  * - If there is a close available city, I have enough troops to capture, and no neighboring colors are actively attacking me or I have enough armies that losing the difference won't matter (especially when someone else captures, or captures and moves away)
  * - If one of my neighbors suddenly starts losing significant armies
  * - If I am the least/most-powerful remaining player
@@ -40,6 +41,7 @@ let ai = {
 	intel: {
 		attackQueue: [],
 		emergencyOrdersStandUntilTurnNumber: null,
+		foreignPolicy: 'EXPLORE',
 		log: Array(5), // Set up limited-length history, with turn info, foreign policy, and other important data to track over time.
 		myStandingArmies: [], // The map locations we own.
 		emptyTerritories: [], // The map locations we can see that are free to conquer.
@@ -59,7 +61,10 @@ let ai = {
 		while (game.intel.attackQueue.length) {
 			// AS LONG AS FOREIGN POLICY DOES NOT DRAMATICALLY CHANGE, WORK THROUGH FIFO QUEUE OF MOVES
 			let currentMove = game.intel.attackQueue.shift();
-			console.log(`TURN ${game.turn}: ${currentMove.mode}: ${currentMove.attackerIndex} --> ${currentMove.targetIndex} ${(currentMove.sendHalf) ? ' (HALF)' : ''}`);
+			let moveInfo = `TURN ${game.turn}: ${currentMove.mode}: ${currentMove.attackerIndex} --> ${currentMove.targetIndex} ${(currentMove.sendHalf) ? ' (HALF)' : ''}`;
+			console.log(moveInfo);
+			game.intel.log.unshift({mode: currentMove.mode, attackerIndex: currentMove.attackerIndex, targetIndex: currentMove.targetIndex}); // push to front of log array--returns new length
+			game.intel.log.length = 5;
 			game.socket.emit("attack", currentMove.attackerIndex, currentMove.targetIndex, currentMove.sendHalf);
 		}
 	},
@@ -75,7 +80,18 @@ let ai = {
 		let targetIndex;
 		let targetPower;
 
-		armyInfo = this.pickStandingArmy(game);
+		if (game.intel.log[0]) {
+			// Keep using the same army for as long as possible
+			if(game.armies[game.intel.log[0].targetIndex] > 1) {
+
+				armyInfo = this.calculateTileLocationInfo(game.intel.log[0].targetIndex, game);
+			} else {
+				armyInfo = this.pickStandingArmy(game);
+			}
+		} else {
+			armyInfo = this.pickStandingArmy(game);
+		}
+
 
 		// console.dir(armyInfo);
 
@@ -83,43 +99,24 @@ let ai = {
 			armyIndex = armyInfo.locationIndex;
 			armyPower = armyInfo.locationPower;
 
-			// Prioritize capture of free neighboring empty spaces
-			if (armyInfo?.north?.locationTerrain === TERRAIN_EMPTY) {
-				targetIndex = armyInfo.north.locationIndex;
-			} else if (armyInfo?.east?.locationTerrain === TERRAIN_EMPTY) {
-				targetIndex = armyInfo.east.locationIndex;
-			} else if (armyInfo?.south?.locationTerrain === TERRAIN_EMPTY) {
-				targetIndex = armyInfo.south.locationIndex;
-			} else if (armyInfo?.west?.locationTerrain === TERRAIN_EMPTY) {
-				targetIndex = armyInfo.west.locationIndex;
-			} else {
-				// No free neighboring empty spaces--pick a direction and go exploring.
-
-				// Randomly choose a direction, since the bot will always travel the same path, otherwise.
-				while(!targetIndex) {
-					let chosenDirection = DIRECTIONS_MAP[Math.floor(Math.random() * 4)]; // Randomly pick a number between 0 and 3
-				// console.log("PICKING RANDOM DIRECTION:", chosenDirection);
-					targetIndex = armyInfo[chosenDirection]?.locationIndex;
-				};
-			}
-
-			targetIndex = this.chooseNeighboringAttackableSpace(armyInfo, game);
+			targetIndex = this.findAttackableSpace(armyInfo, game);
 
 			if (targetIndex) {
 				targetPower = game.armies[targetIndex];
 
 				// Always send the whole army if passing through own territory or attacking empty spaces.
-				let shouldSendWholeStrength = (game.terrain[targetIndex] === game.playerIndex || (targetPower !== 0 && armyPower / 2 > targetPower + 1))
+				let shouldSendWholeStrength = true; //(game.terrain[targetIndex] === game.playerIndex || (targetPower !== 0 && armyPower / 2 > targetPower + 1))
+				// SEND HALF LOGIC SEEMS A LITTLE BROKEN
 
 				// Add to FIFO attack queue
-				game.intel.attackQueue.push({mode: game.intel.foreignPolicy, attackerIndex: armyIndex, targetIndex, sendHalf: (shouldSendWholeStrength) ? false : true}); // SEND HALF LOGIC SEEMS A LITTLE BROKEN
+				game.intel.attackQueue.push({mode: game.intel.foreignPolicy, attackerIndex: armyIndex, targetIndex, sendHalf: (shouldSendWholeStrength) ? false : true});
 
 				// If our attacking army will still have more than 2 power and lands near empty spaces, keep going
-				targetInfo = this.calculateTileLocationInfo(targetIndex, game);
-				let newTargetIndex = this.chooseNeighboringAttackableSpace(targetInfo, game);
-				if (armyPower - 1 - targetPower > 1) { // && has empty spaces to attack
-					game.intel.attackQueue.push({mode: game.intel.foreignPolicy, attackerIndex: targetIndex, targetIndex: newTargetIndex});
-				}
+				// targetInfo = this.calculateTileLocationInfo(targetIndex, game);
+				// let newTargetIndex = this.findAttackableSpace(targetInfo, game);
+				// if (armyPower - 1 - targetPower > 1) { // && has empty spaces to attack
+				// 	game.intel.attackQueue.push({mode: game.intel.foreignPolicy, attackerIndex: targetIndex, targetIndex: newTargetIndex});
+				// }
 
 			} else {
 				console.warn(`TURN ${game.turn}: SKIPPED: (no attack target selected)`);
@@ -128,60 +125,87 @@ let ai = {
 		} else {
 			console.warn(`TURN ${game.turn}: SKIPPED: (no available army found)`);
 		}
-
-		// switch (game.intel.foreignPolicy) {
-		// 	case 'EXPLORE':
-		// }
 	},
 
-	chooseNeighboringAttackableSpace: function (spaceInfo, game) {
+	// Remember and check against previous moves to avoid backtracking.
+	spaceIsInRecentHistory: function (targetIndex, game) {
+		for (let idx = 0; idx < game.intel.log.length; idx++) {
+			const logEntry = game.intel.log[idx];
+			if (logEntry && logEntry.attackerIndex === targetIndex) {
+				return true;
+			}
+		}
+		return false;
+	},
+
+	findAttackableSpace: function (spaceInfo, game) {
+		if (typeof spaceInfo === "number") {
+			spaceInfo = this.calculateTileLocationInfo(spaceInfo, game);
+		}
 		let targetIndex;
+
 		// Prioritize capture of free neighboring empty spaces.
-		if (game.intel.foreignPolicy === 'EXPLORE')
+		if (spaceInfo.north && spaceInfo?.north?.locationTerrain === TERRAIN_EMPTY) {
+			targetIndex = spaceInfo.north.locationIndex;
+		} else if (spaceInfo.east && spaceInfo?.east?.locationTerrain === TERRAIN_EMPTY) {
+			targetIndex = spaceInfo.east.locationIndex;
+		} else if (spaceInfo.south && spaceInfo?.south?.locationTerrain === TERRAIN_EMPTY) {
+			targetIndex = spaceInfo.south.locationIndex;
+		} else if (spaceInfo.west && spaceInfo?.west?.locationTerrain === TERRAIN_EMPTY) {
+			targetIndex = spaceInfo.west.locationIndex;
+		} // No free neighboring empty spaces.
+
 		switch (game.intel.foreignPolicy) {
 			case 'EXPLORE':
 			case 'EXPAND':
-				if (spaceInfo?.north?.locationTerrain === TERRAIN_EMPTY) {
-					targetIndex = spaceInfo.north.locationIndex;
-				} else if (spaceInfo?.east?.locationTerrain === TERRAIN_EMPTY) {
-					targetIndex = spaceInfo.east.locationIndex;
-				} else if (spaceInfo?.south?.locationTerrain === TERRAIN_EMPTY) {
-					targetIndex = spaceInfo.south.locationIndex;
-				} else if (spaceInfo?.west?.locationTerrain === TERRAIN_EMPTY) {
-					targetIndex = spaceInfo.west.locationIndex;
-				} // No free neighboring empty spaces.
+				// Check surrounding tiles for easy conquests (TODO: FIX RECURSION)
+				// if (spaceInfo.north && this.findAttackableSpace(spaceInfo.north.locationIndex, game)) {
+				// 	targetIndex = spaceInfo.north.locationIndex;
+				// } else if (spaceInfo.east && this.findAttackableSpace(spaceInfo.east.locationIndex, game)) {
+				// 	targetIndex = spaceInfo.east.locationIndex;
+				// } else if (spaceInfo.south && this.findAttackableSpace(spaceInfo.south.locationIndex, game)) {
+				// 	targetIndex = spaceInfo.south.locationIndex;
+				// } else if (spaceInfo.west && this.findAttackableSpace(spaceInfo.west.locationIndex, game)) {
+				// 	targetIndex = spaceInfo.west.locationIndex;
+				// }
 				break;
-				case 'ATTACK':
-					if (spaceInfo?.north?.locationTerrain === TERRAIN_EMPTY) {
-						targetIndex = spaceInfo.north.locationIndex;
-					} else if (spaceInfo?.east?.locationTerrain === TERRAIN_EMPTY) {
-						targetIndex = spaceInfo.east.locationIndex;
-					} else if (spaceInfo?.south?.locationTerrain === TERRAIN_EMPTY) {
-						targetIndex = spaceInfo.south.locationIndex;
-					} else if (spaceInfo?.west?.locationTerrain === TERRAIN_EMPTY) {
-						targetIndex = spaceInfo.west.locationIndex;
-					} // No free neighboring empty spaces.
-					else if (spaceInfo?.north?.locationTerrain !== game.playerIndex && spaceInfo.locationPower > spaceInfo.north.locationPower) {
-						targetIndex = spaceInfo.north.locationIndex;
-					} else if (spaceInfo?.east?.locationTerrain !== game.playerIndex && spaceInfo.locationPower > spaceInfo.east.locationPower) {
-						targetIndex = spaceInfo.east.locationIndex;
-					} else if (spaceInfo?.south?.locationTerrain !== game.playerIndex && spaceInfo.locationPower > spaceInfo.south.locationPower) {
-						targetIndex = spaceInfo.south.locationIndex;
-					} else if (spaceInfo?.west?.locationTerrain !== game.playerIndex && spaceInfo.locationPower > spaceInfo.west.locationPower) {
-						targetIndex = spaceInfo.west.locationIndex;
-					}	// No opponent-owned attackable neighboring spaces.
+			case 'ATTACK':
+				// Prioritize opponent-owned attackable neighboring spaces.
+				if (spaceInfo.north && spaceInfo.north.locationTerrain !== game.playerIndex && spaceInfo.locationPower > spaceInfo.north.locationPower && !this.spaceIsInRecentHistory(spaceInfo.north.locationIndex, game)) {
+					targetIndex = spaceInfo.north.locationIndex;
+				} else if (spaceInfo.east && spaceInfo.east.locationTerrain !== game.playerIndex && spaceInfo.locationPower > spaceInfo.east.locationPower && !this.spaceIsInRecentHistory(spaceInfo.east.locationIndex, game)) {
+					targetIndex = spaceInfo.east.locationIndex;
+				} else if (spaceInfo.south && spaceInfo.south.locationTerrain !== game.playerIndex && spaceInfo.locationPower > spaceInfo.south.locationPower && !this.spaceIsInRecentHistory(spaceInfo.south.locationIndex, game)) {
+					targetIndex = spaceInfo.south.locationIndex;
+				} else if (spaceInfo.west && spaceInfo.west.locationTerrain !== game.playerIndex && spaceInfo.locationPower > spaceInfo.west.locationPower && !this.spaceIsInRecentHistory(spaceInfo.west.locationIndex, game)) {
+					targetIndex = spaceInfo.west.locationIndex;
+				}
 				break;
 			default:
+				console.warn(`UNRECOGNIZED foreignPolicy: ${game.intel.foreignPolicy}`);
 				break;
 		}
 
 		// Randomly choose a direction, since the bot will always travel the same path, otherwise.
+		// Use history to avoid immediate backtracking.
+		// Keep track of looping, to avoid paralysis.
+		let loopCount = 0;
 		while(!targetIndex) {
 			let chosenDirection = DIRECTIONS_MAP[Math.floor(Math.random() * 4)]; // Randomly pick a number between 0 and 3
-			// console.log("PICKING RANDOM DIRECTION:", chosenDirection);
 			// Prioritize capture of non-self-owned spaces.
 			// if (spaceInfo[chosenDirection].locationPower !== 1) { // game.terrain[spaceInfo[chosenDirection].locationIndex] !== game.playerIndex &&
-				targetIndex = spaceInfo[chosenDirection]?.locationIndex;
+			if (loopCount < 4) {
+				if (spaceInfo[chosenDirection] && !this.spaceIsInRecentHistory(spaceInfo[chosenDirection].locationIndex, game)) {
+					targetIndex = spaceInfo[chosenDirection].locationIndex;
+				}
+			} else if (loopCount < 8) {
+				if (spaceInfo[chosenDirection]) {
+					targetIndex = spaceInfo[chosenDirection].locationIndex;
+				}
+			} else if (spaceInfo[chosenDirection]) {
+				targetIndex = spaceInfo[chosenDirection].locationIndex;
+			}
+			loopCount++;
 			// }
 		};
 
@@ -194,14 +218,16 @@ let ai = {
 	 determineForeignPolicy: function (game) {
 		let foreignPolicy = 'EXPLORE';
 
-		// Force early-game expansion.
-		if (game.intel.undiscovered) {
-			foreignPolicy = 'EXPAND';
 		// Force early-game exploration.
-		} else if (game.turn < EARLY_GAME_TURN_THRESHOLD) {
+		if (game.turn < EARLY_GAME_TURN_THRESHOLD) {
 			foreignPolicy = 'EXPLORE';
-		} else { // AS LONG AS NO LIFE-THREATENING UPDATES EXIST
-			foreignPolicy = 'ATTACK';
+		} else {
+			// Expand territory while undiscovered.
+			if (game.intel.undiscovered) {
+				foreignPolicy = 'EXPAND';
+			} else { // AS LONG AS NO LIFE-THREATENING UPDATES EXIST AND WE HAVE ENOUGH TROOPS
+				foreignPolicy = 'ATTACK';
+			}
 		}
 
 		// TODO: Check the scoreboard
@@ -220,17 +246,27 @@ let ai = {
 	pickStandingArmy: function (game) {
 		let locationInfo = false;
 
-		// if (game.turn < EARLY_GAME_TURN_THRESHOLD) { // Don't be afraid of using armies from general for opening conquests.
-		// 	return this.calculateTileLocationInfo(game.myGeneralLocationIndex, game);
-		// }
-
 		for (let idx = 0; idx < game.intel.myStandingArmies.length; idx++) {
-			// console.dir(game.intel.myStandingArmies);
 			let armyInfo = game.intel.myStandingArmies[idx];
 			if (armyInfo.locationPower > 1) {
-				locationInfo = this.calculateTileLocationInfo(armyInfo.locationIndex, game);
+				switch (game.intel.foreignPolicy) {
+					case 'ATTACK':
+					case 'EXPAND':
+					case 'EXPLORE':
+						// Don't be afraid of using armies from general for opening conquests.
+						if (game.turn < EARLY_GAME_TURN_THRESHOLD && !game.intel.discovered) {
+							locationInfo = this.calculateTileLocationInfo(armyInfo.locationIndex, game);
+						}  else if (armyInfo.locationIndex !== game.myGeneralLocationIndex) {
+							locationInfo = this.calculateTileLocationInfo(armyInfo.locationIndex, game);
+						}
+						break;
+					default:
 
-				break; // ARTIFICIALLY RETURN THE STRONGEST ARMY
+				}
+
+				if (locationInfo) {
+					break; // ARTIFICIALLY RETURN THE STRONGEST ARMY
+				}
 			}
 		}
 
@@ -278,8 +314,6 @@ let ai = {
 			east,
 			south,
 			west,
-			MAP_HEIGHT: game.mapHeight,
-			MAP_WIDTH: game.mapWidth,
 		}
 	},
 
