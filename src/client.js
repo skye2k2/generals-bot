@@ -5,7 +5,7 @@ import config from './config';
 let forceStartFlag = false;
 let game = {};
 
-export function ForceStart() {
+export function ForceStart () {
 	setTimeout(()=> {
 		forceStartFlag = !forceStartFlag;
 		document.getElementById("log").append("\nToggled force_start: " + forceStartFlag);
@@ -13,7 +13,7 @@ export function ForceStart() {
 	}, 100); // Keep from firing join and force_start events simultaneously
 }
 
-export function Join(userID, username) {
+export function Join (userID, username) {
 	document.getElementById("log").innerHTML = "Connected to lobby: " + config.GAME_ID;
 	console.log('Joined custom game at http://bot.generals.io/games/' + encodeURIComponent(config.GAME_ID));
 	socket.emit('join_private', config.GAME_ID, userID);
@@ -31,7 +31,7 @@ export function Join(userID, username) {
 	// socket.emit('join_team', 'team_name', user_id);
 }
 
-export function Quit() {
+export function Quit () {
 	document.getElementById("log").append("\nReplay:\n" + game.replay_url);
 	console.log("Game over. Halting execution until next game begin.");
 	game.gameOver = true;
@@ -40,7 +40,7 @@ export function Quit() {
 	// socket.emit('cancel'); // Leave queue
 }
 
-export function Team(gameId, team) {
+export function Team (gameId, team) {
 	socket.emit('set_custom_team', gameId, team)
 }
 
@@ -113,7 +113,7 @@ socket.on("game_start", function(rawData) {
  * Example 1: patching a diff of [1, 1, 3] onto [0, 0] yields [0, 3].
  * Example 2: patching a diff of [0, 1, 2, 1] onto [0, 0] yields [2, 0].
  */
-function patch(old, diff) {
+function patch (old, diff) {
   var out = [];
   var i = 0;
   while (i < diff.length) {
@@ -139,16 +139,24 @@ socket.on("game_update", function(rawData) {
   // Patch the city and map diffs into our local variables.
   game.map = patch(game.map, rawData.map_diff);
   game.cities = patch(game.cities, rawData.cities_diff);
-  game.generals = rawData.generals;
+  game.generals = rawData.generals; // TODO: keep a history of known general locations
+	game.generals[game.playerIndex] = -1; // Remove our own general from the list, to avoid confusion.
 	game.scores = rawData.scores;
 
 	// Avoid resetting game constants every update
-	if (!game.mapSize) {
+	if (!game.mapSize || !game.myGeneralLocationIndex) {
 		// The first two items in |map| are the map width and height dimensions.
 		game.mapWidth = game.map[0];
 		game.mapHeight = game.map[1];
 		game.mapSize = game.mapWidth * game.mapHeight;
-		game.myGeneralLocationIndex = game.generals[game.playerIndex];
+
+		// The server does not tell us our own general location, so figure it out the first time we get an update with our first army
+		for (let idx = 0; idx < game.terrain.length; idx++) {
+			if (game.terrain[idx] === game.playerIndex) {
+				game.myGeneralLocationIndex = idx;
+				break;
+			}
+		}
 	}
 
   // The next |size| entries of map are army values.

@@ -26,10 +26,9 @@ const DIRECTIONS_MAP = [
 	'west',
 ];
 
-const OPENING_GAME_TURN_THRESHOLD = 10;
+const OPENING_GAME_TURN_THRESHOLD = 20;
 const EARLY_GAME_TURN_THRESHOLD = 50;
 const MID_GAME_TURN_THRESHOLD = 100;
-
 
 const TERRAIN_EMPTY = -1;
 // const TERRAIN_MTN = -2;
@@ -40,12 +39,14 @@ const TERRAIN_EMPTY = -1;
 let ai = {
 	intel: {
 		attackQueue: [],
+		discoveredArmies: [],
 		emergencyOrdersStandUntilTurnNumber: null,
 		foreignPolicy: 'EXPLORE',
 		log: Array(5), // Set up limited-length history, with turn info, foreign policy, and other important data to track over time.
 		myStandingArmies: [], // The map locations we own.
 		emptyTerritories: [], // The map locations we can see that are free to conquer.
-		undiscovered: true // Whether we have not been seen, yet.
+		undiscovered: true, // Whether we have not been seen, yet.
+		USEFUL_ARMY_THRESHOLD: 2,
 	},
 
 	/**
@@ -56,7 +57,7 @@ let ai = {
 		game.intel = this.intel;
 		this.determineIntel(game);
 		this.determineForeignPolicy(game);
-		this.determineAttackMoves(game);
+		this.determineMoves(game);
 
 		while (game.intel.attackQueue.length) {
 			// AS LONG AS FOREIGN POLICY DOES NOT DRAMATICALLY CHANGE, WORK THROUGH FIFO QUEUE OF MOVES
@@ -72,7 +73,7 @@ let ai = {
 	/**
 	 * Calculate queue of attack moves to accomplish foreignPolicy goal
 	 */
-	 determineAttackMoves: function (game) {
+	 determineMoves: function (game) {
 		let armyInfo;
 		let armyIndex;
 		let armyPower;
@@ -89,9 +90,9 @@ let ai = {
 				armyInfo = this.pickStandingArmy(game);
 			}
 		} else {
+			// TODO: Consider using the teensiest armies for the opening set of turns
 			armyInfo = this.pickStandingArmy(game);
 		}
-
 
 		// console.dir(armyInfo);
 
@@ -170,6 +171,7 @@ let ai = {
 				// }
 				break;
 			case 'ATTACK':
+			case 'MURDER': // We know a general location
 				// Prioritize opponent-owned attackable neighboring spaces.
 				if (spaceInfo.north && spaceInfo.north.locationTerrain !== game.playerIndex && spaceInfo.locationPower > spaceInfo.north.locationPower && !this.spaceIsInRecentHistory(spaceInfo.north.locationIndex, game)) {
 					targetIndex = spaceInfo.north.locationIndex;
@@ -212,6 +214,42 @@ let ai = {
 		return targetIndex;
 	},
 
+	// Recursive
+	// You can pass in a location index or a locationInfo, in addition to the list of armies of significance. The initial sourceArmies should be game.intel.myStandingArmies, and tempQueue is an accumulator.
+	// Limitations: Will only gather from connected owned spaces.
+	gatherArmiesToLocation: function (locationInfo, game, sourceArmies = [], processedSpaces = [], tempQueue = []) {
+		if (!locationInfo) {
+			return tempQueue;
+		}
+
+		if (typeof locationInfo === "number") {
+			locationInfo = this.calculateTileLocationInfo(locationInfo, game);
+		}
+
+		// Remove the current space from sourceArmies, if it exists, when checking against it
+		if (sourceArmies.includes(locationInfo.locationIndex)) {
+			sourceArmies.splice(sourceArmies.indexOf(locationInfo.locationIndex), 1);
+		}
+
+		// End recursion if we have processed all standing armies or if we have processed this space already
+		if (!sourceArmies.length || processedSpaces.includes(locationInfo.locationIndex)) {
+			return tempQueue;
+		} else {
+			processedSpaces.push(locationInfo.locationIndex)
+		}
+
+		for (let idx = 0; idx < DIRECTIONS_MAP.length; idx++) {
+			const tileInfo = DIRECTIONS_MAP[idx]
+
+			if (tileInfo && tileInfo.locationTerrain === game.playerIndex) {
+				tempQueue.push(this.gatherArmiesToLocation(tileInfo.locationIndex, game, sourceArmies, processedSpaces, tempQueue));
+
+				tempQueue.push({mode: "GATHER", attackerIndex: tileInfo.locationIndex, targetIndex: locationInfo.locationIndex});
+			}
+		}
+		return tempQueue
+	},
+
 	/**
 	 * Calculate posture based on game state
 	 */
@@ -226,7 +264,7 @@ let ai = {
 			if (game.intel.undiscovered) {
 				foreignPolicy = 'EXPAND';
 			} else { // AS LONG AS NO LIFE-THREATENING UPDATES EXIST AND WE HAVE ENOUGH TROOPS
-				foreignPolicy = 'ATTACK';
+				foreignPolicy = 'MURDER';
 			}
 		}
 
@@ -239,8 +277,9 @@ let ai = {
 	 * Calculate intel based on board state.
 	 */
 	determineIntel: function (game) {
+		game.intel.USEFUL_ARMY_THRESHOLD = Math.floor(game.turn / 100) + 2;
 		this.parseMap(game);
-		// this.analyzeOpponents();
+		// this.analyzeOpportunities(game);
 	},
 
 	pickStandingArmy: function (game) {
@@ -248,7 +287,7 @@ let ai = {
 
 		for (let idx = 0; idx < game.intel.myStandingArmies.length; idx++) {
 			let armyInfo = game.intel.myStandingArmies[idx];
-			if (armyInfo.locationPower > 1) {
+			if (armyInfo.locationPower >= game.intel.USEFUL_ARMY_THRESHOLD) {
 				switch (game.intel.foreignPolicy) {
 					case 'ATTACK':
 					case 'EXPAND':
@@ -260,6 +299,36 @@ let ai = {
 							locationInfo = this.calculateTileLocationInfo(armyInfo.locationIndex, game);
 						}
 						break;
+						case 'MURDER':
+							// If we know our opponent's general's location, attack
+							let foundAGeneralToAttack = false;
+							for (let idx = 0; idx < game.generals.length; idx++) {
+								if (game.generals[idx] !== -1) {
+									// [{total: 182, tiles: 52, i: 0, color: 0, dead: false}, {total: 137, tiles: 23, i: 1, color: 1, dead: false}]
+									if (game.scores) { // TODO: check scores to see if it is worth attacking
+										// console.log(`\nFOUND A GENERAL TO MURDER!!!\n`);
+										// foundAGeneralToAttack = true;
+										// let listOfAttacksToMake = this.gatherArmiesToLocation(game.generals[idx], game, game.intel.myStandingArmies);
+
+										// console.log(`\nEXITED GENERAL RECURSION:\n`);
+										// console.dir(listOfAttacksToMake);
+										return;
+									}
+								}
+							}
+
+							if (!foundAGeneralToAttack) {
+								// Pick an enemy next to us, and send all of our troops there
+								locationInfo = this.findClosestOwnedLocation(game.intel.discoveredArmies[Math.floor(Math.random() * game.intel.discoveredArmies.length)], game);
+
+								// locationInfo = true; // Just force us to break out of the loop
+
+								// let listOfAttacksToMake = this.gatherArmiesToLocation(jumpOffPoint, game, game.intel.myStandingArmies);
+
+								// console.log(`\nEXITED NON-GENERAL RECURSION!!!\n`);
+								// console.dir(listOfAttacksToMake);
+							}
+						break;
 					default:
 
 				}
@@ -270,13 +339,34 @@ let ai = {
 			}
 		}
 
+		// IF STILL NO LOCATIONINFO AND NO MOVE QUEUE, LOOSEN UP RESTRICTIONS
+
 		return locationInfo;
+	},
+
+	findClosestOwnedLocation: function (indexToCheck, game) {
+		for (let idx = 0; idx < game.terrain.length; idx++) {
+			if (game.terrain[idx] === game.playerIndex && (
+				Math.abs(indexToCheck - idx) < 1 ||
+				idx === indexToCheck - game.mapWidth ||
+				idx === indexToCheck + game.mapWidth ||
+				Math.abs(indexToCheck - game.mapWidth - idx) < 1 ||
+				Math.abs(indexToCheck + game.mapWidth - idx) < 1
+			)) {
+				// console.log(`CLOSEST OWNED TILE to ${indexToCheck}: ${idx}`);
+				return this.calculateTileLocationInfo(idx, game);
+			}
+		}
+		// console.log(`DIDN'T FIND CLOSEST OWNED TILE, USING GENERAL: ${game.myGeneralLocationIndex}`)
+		// return this.calculateTileLocationInfo(game.myGeneralLocationIndex, game); // We didn't find an easy jump-off point to attack from, so send the armies to the general space.
 	},
 
 	calculateTileLocationInfo: function (indexToCheck, game) {
 		if (!indexToCheck) {
 			return false;
 		}
+
+		// Keep track of cities
 
 		// Determine zero-indexed row and column for extended calculations
 		const row = Math.floor(indexToCheck / game.mapWidth);
@@ -319,31 +409,33 @@ let ai = {
 
 	/**
 	 * Extract map state into actionable data.
-	 * Locations with a -1 map to emptyTerritories
-	 * Locations matching playerIndex and a count > 1 map to standingArmies
+	 * Locations with a -1 map to emptyTerritories.
+	 * Locations matching playerIndex and a count >= USEFUL_ARMY_THRESHOLD map to standingArmies.
+	 * Locations with a terrain index != playerIndex are enemy locations.
 	 */
 	 parseMap: function (game) {
-		game.intel.myStandingArmies = [];
 		game.intel.emptyTerritories = [];
+		game.intel.discoveredArmies = [];
+		game.intel.myStandingArmies = [];
 
-		// Loop through map array once, and sort data appropriately.
+		// Loop through map array once, and sort all data appropriately.
 		for (let idx = 0; idx < game.terrain.length; idx++) {
 			if (game.terrain[idx] === TERRAIN_EMPTY) {
 				game.intel.emptyTerritories.push(idx);
-			} else if (game.terrain[idx] === game.playerIndex && game.armies[idx] > 1) {
+			} else if (game.terrain[idx] === game.playerIndex && game.armies[idx] >= game.intel.USEFUL_ARMY_THRESHOLD) {
 				game.intel.myStandingArmies.push({locationIndex: idx, locationPower: game.armies[idx]});
-			} else if (game.terrain[idx] !== game.playerIndex) {
+			} else if (game.terrain[idx] > TERRAIN_EMPTY && game.terrain[idx] !== game.playerIndex) {
 				game.intel.undiscovered = false;
+				game.intel.discoveredArmies.push(idx);
 			}
 		}
 
-		// TODO: Consider using the smallest armies for the opening set of turns
 		game.intel.myStandingArmies.sort((a, b) => b.locationPower - a.locationPower); // sort() so that our largest army will be at the front of the array.
 	},
 }
 
 let dataToTrack = {
-  foreignPolicy /* mode */: 'TURTLE|EXPLORE|EXPAND|DEFEND|CONSOLIDATE|DECOY|ATTACK|GAMBIT',
+  foreignPolicy /* mode */: 'TURTLE|EXPLORE|EXPAND|DEFEND|CONSOLIDATE|GATHER|MURDER|DECOY|ATTACK|GAMBIT',
 	undiscovered: true,
 	largeAvailableArmies: [
 		{
