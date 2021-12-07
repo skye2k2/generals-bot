@@ -40,6 +40,7 @@ export default {
 <summary>Stages of Development Replays:</summary>
 
 - [most recent failure]
+- https://bot.generals.io/replays/HgErmdnFt (fast creep queue added)
 - https://bot.generals.io/replays/BlkI7vOYY (improved decision-making)
 - https://bot.generals.io/replays/SerSfIDYF (1st bot win, fast attack with quick expansion)
 - https://bot.generals.io/replays/BgvSl-mtK (2x speed, now explores without backtracking so much and uses most-recent army when possible)

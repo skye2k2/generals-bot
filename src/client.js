@@ -138,8 +138,9 @@ function patch (old, diff) {
 socket.on("game_update", function(rawData) {
   // Patch the city and map diffs into our local variables.
   game.map = patch(game.map, rawData.map_diff);
-  game.cities = patch(game.cities, rawData.cities_diff);
+  game.cities = patch(game.cities, rawData.cities_diff); // TODO: keep a history of known city locations
   game.generals = rawData.generals; // TODO: keep a history of known general locations
+	game.myGeneralLocationIndex = game.generals[game.playerIndex];
 	game.generals[game.playerIndex] = -1; // Remove our own general from the list, to avoid confusion.
 	game.scores = rawData.scores;
 
@@ -149,14 +150,6 @@ socket.on("game_update", function(rawData) {
 		game.mapWidth = game.map[0];
 		game.mapHeight = game.map[1];
 		game.mapSize = game.mapWidth * game.mapHeight;
-
-		// The server does not tell us our own general location, so figure it out the first time we get an update with our first army
-		for (let idx = 0; idx < game.terrain.length; idx++) {
-			if (game.terrain[idx] === game.playerIndex) {
-				game.myGeneralLocationIndex = idx;
-				break;
-			}
-		}
 	}
 
   // The next |size| entries of map are army values.
