@@ -118,6 +118,8 @@ socket.on("game_start", function(rawData) {
 	game.usernames = rawData.usernames;
 	game.chatRoom = rawData.chat_room;
 	socket.emit('chat_message', game.chatRoom, 'GLHF!');
+
+	ai.init(game);
 });
 
 /* Returns a new array created by patching the diff into the old array.
@@ -215,9 +217,7 @@ socket.on("game_update", function(rawData) {
 
 	game.turn = rawData.turn;
 
-	// TODO: Consider just passing game in an init function to save as a `this.property` inside of `ai`, so that we don't pass it around everywhere.
-	ai.move(game);
-
+	ai.move();
 });
 
 
