@@ -5,6 +5,21 @@ import config from './config';
 let forceStartFlag = false;
 let game = {};
 
+const COLOR_MAP = [
+	'RED',
+	'LIGHT_BLUE',
+	'GREEN',
+	'CYAN',
+	'ORANGE',
+	'PINK',
+	'MAGENTA',
+	'MAROON',
+	'GOLD',
+	'BROWN',
+	'BLUE',
+	'LAVENDER',
+];
+
 export function ForceStart () {
 	setTimeout(()=> {
 		forceStartFlag = !forceStartFlag;
@@ -71,21 +86,22 @@ socket.on('game_won', () => {
 
 socket.on("game_start", function(rawData) {
   document.getElementById("log").innerHTML = "Game starting...";
-	// Initialize/Re-initialize game state.
+	// Initialize/Re-initialize game state used by both bot and client.
 	game = {
 		socket,
 		chatRoom: null,
-		myGeneralLocationIndex: null,
-		playerIndex: null,
 		map: [],
-		generals: [], // The indices of generals we have vision of.
+		generals: [], // The indices of generals we know of.
 		cities: [], // The indices of cities we have vision of.
 		armies: [],
 		terrain: [],
-		scores: [], // The index is supposed to map, but it doesn't appear to
 		mapWidth: null,
 		mapHeight: null,
 		mapSize: null,
+		myGeneralLocationIndex: null,
+		myScore: {},
+		playerIndex: null,
+		opponents: [],
 		team: null,
 		turn: 0,
 		gameOver: false,
@@ -139,13 +155,47 @@ socket.on("game_update", function(rawData) {
   // Patch the city and map diffs into our local variables.
   game.map = patch(game.map, rawData.map_diff);
   game.cities = patch(game.cities, rawData.cities_diff); // TODO: keep a history of known city locations
-  game.generals = rawData.generals; // TODO: keep a history of known general locations
-	game.myGeneralLocationIndex = game.generals[game.playerIndex];
+	game.myGeneralLocationIndex = rawData.generals[game.playerIndex];
 	game.generals[game.playerIndex] = -1; // Remove our own general from the list, to avoid confusion.
-	game.scores = rawData.scores;
+
+	// Keep track of general locations, if discovered, even if no longer visible.
+	for (let idx = 0; idx < rawData.generals.length; idx++) {
+		const generalLocation = rawData.generals[idx];
+
+		if (!game.generals || game.generals[idx] !== -1) { // We may need to track whether the player is still alive, as well
+			game.generals[idx] = generalLocation;
+		}
+	}
+
+	/**
+	 * Extract scoreboard and general state into actionable data, because scores is not sorted according to playerIndex.
+	 * playerIndex follows lobby order (playerIndex = 0 is the red player--generally lobby leader)?
+	 * generals with a location of -1 are unknown.
+	 * scores data format: [{total, tiles, i, color, dead}]
+	 * Populates game.opponents array with scoreboard details for living opponents and null for dead players.
+	 */
+	rawData.scores.map((score) => {
+		// TODO: Take teammates from rawData.teams into account & keep separate from opponents
+		if (score.i === game.playerIndex) {
+			const lostArmies = (game.myScore.total >= score.total) ? true : false;
+			const lostTerritory = (game.myScore.tiles < score.tiles) ? true : false;
+
+			game.myScore = {...score, lostArmies, lostTerritory};
+		} else if (!score.dead) {
+			game.opponents[score.i] = {color: COLOR_MAP[score.color], dead: score.dead, tiles: score.tiles, total: score.total};
+
+			if (game.generals[score.i] !== -1) {
+				game.opponents[score.i].generalLocationIndex = game.generals[score.i]
+			}
+		} else {
+			game.opponents[score.i] = null;
+		}
+
+		return null;
+	});
 
 	// Avoid resetting game constants every update
-	if (!game.mapSize || !game.myGeneralLocationIndex) {
+	if (!game.mapSize) {
 		// The first two items in |map| are the map width and height dimensions.
 		game.mapWidth = game.map[0];
 		game.mapHeight = game.map[1];
@@ -164,13 +214,9 @@ socket.on("game_update", function(rawData) {
   game.terrain = game.map.slice(game.mapSize + 2, game.mapSize + 2 + game.mapSize);
 
 	game.turn = rawData.turn;
-	// There are 2 client ticks per server tick, so skip every other one for slower execution.
-	// let recalculatedTurn = Math.floor(rawData.turn/2);
 
-	// if (game.turn !== recalculatedTurn) {
-	// 	game.turn = recalculatedTurn;
-		ai.move(game);
-	// }
+	// TODO: Consider just passing game in an init function to save as a `this.property` inside of `ai`, so that we don't pass it around everywhere.
+	ai.move(game);
 
 });
 
