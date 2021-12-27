@@ -44,6 +44,9 @@ export default {
 <summary>Stages of Development Replays:</summary>
 
 - [most recent failure]
+- https://bot.generals.io/replays/rgjawPwsF (top of the leaderboard the whole game, with aggressive city and general attack algorithm, missing defense strategy)
+- https://bot.generals.io/replays/rgTpm28ot (1st 3-player win)
+- https://bot.generals.io/replays/rl-2BbHiY (1st legitimate win, with initial general attack algorithm)
 - https://bot.generals.io/replays/BltYNsCKY (1st near-win, with 2 captures, without any specific city or general attack targeting or army gathering implemented)
 - https://bot.generals.io/replays/rgRdQY0tY (hyper-aggressive creep reclamation)
 - https://bot.generals.io/replays/HgErmdnFt (fast creep queue added)
