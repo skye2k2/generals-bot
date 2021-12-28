@@ -1,9 +1,11 @@
 import io from 'socket.io-client';
-import ai from './bot';
+import bot from './bots/bot';
+import enigma from './bots/enigma';
 import config from './config';
 
 let forceStartFlag = false;
 let game = {};
+let ai;
 
 const COLOR_MAP = [
 	'RED',
@@ -59,7 +61,16 @@ export function Team (gameId, team) {
 	socket.emit('set_custom_team', gameId, team)
 }
 
-var socket = io("wss://botws.generals.io");
+export function BotType (botType) {
+	document.getElementById("log").append("\nSet BotType: " + botType);
+	if(botType === 'enigma') {
+		ai = enigma
+	} else {
+		ai = bot
+	}
+}
+
+let socket = io("wss://botws.generals.io");
 
 const startMessages = [
 	'GLHF!',
