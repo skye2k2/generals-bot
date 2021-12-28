@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import { ForceStart, Join, Quit, Team } from "../../src/client.js";
+import { ForceStart, Join, Quit, Team, ChooseBotVariant } from "../../src/client.js";
 import { Button, Box, Select } from "grommet";
 import config from '../config'
 
@@ -9,17 +9,25 @@ export default function Play({ match }) {
   let bot = {
     id: config[`BOT_USER_ID_${botId}`],
     name: config[`BOT_NAME_${botId}`],
+    variant: 'MurderBot',
+  }
+
+  const [teamValue, setTeamValue] = useState();
+  const [botVariantValue, setBotVariantValue] = useState(bot.variant);
+  const handleTeamChange = (option) => {
+    setTeamValue(option);
+    Team(config.GAME_ID, option);
+  }
+  // TODO: Remember bot variant chosen across refreshes
+  const handleBotVariantChange = (option) => {
+    setBotVariantValue(option);
+    ChooseBotVariant(option);
   }
 
   setTimeout(() => {
     Join(bot.id, bot.name);
+    ChooseBotVariant(botVariantValue || bot.variant);
   });
-
-  const [value, setValue] = useState()
-  const handleChange = option => {
-    setValue(option)
-    Team(config.GAME_ID, option)
-  }
 
   return (
     <>
@@ -42,8 +50,15 @@ export default function Play({ match }) {
             placeholder="Team"
             size="small"
             options={['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']}
-            value={value}
-            onChange={({option}) => handleChange(option)}
+            value={teamValue}
+            onChange={({option}) => handleTeamChange(option)}
+          />
+          <Select
+            placeholder="Bot Variant"
+            size="small"
+            options={['MurderBot', 'EnigmaBot']}
+            value={botVariantValue}
+            onChange={({option}) => handleBotVariantChange(option)}
           />
           <Button
             onClick={() => {

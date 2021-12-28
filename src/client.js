@@ -1,9 +1,16 @@
 import io from 'socket.io-client';
-import ai from './bot';
+import MurderBot from './bots/murderbot';
+import EnigmaBot from './bots/enigmabot';
 import config from './config';
 
 let forceStartFlag = false;
 let game = {};
+let ai;
+
+const BOT_MAP = {
+	"MurderBot": MurderBot,
+	"EnigmaBot": EnigmaBot,
+};
 
 const COLOR_MAP = [
 	'RED',
@@ -56,10 +63,21 @@ export function Quit () {
 }
 
 export function Team (gameId, team) {
-	socket.emit('set_custom_team', gameId, team)
+	socket.emit('set_custom_team', gameId, team);
+	document.getElementById("log").append(`\nTeam ${team} joined`);
 }
 
-var socket = io("wss://botws.generals.io");
+export function ChooseBotVariant (botVariant) {
+	if (BOT_MAP[botVariant]) {
+		ai = BOT_MAP[botVariant];
+		document.getElementById("log").append(`\n${botVariant} selected`);
+	} else {
+		ai = BOT_MAP.MurderBot;
+		document.getElementById("log").append(`\nUnrecognized bot variant '${botVariant}' selected. Defaulting to MurderBot`);
+	}
+}
+
+let socket = io("wss://botws.generals.io");
 
 const startMessages = [
 	'GLHF!',

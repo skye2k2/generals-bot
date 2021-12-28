@@ -10,10 +10,12 @@ This is a bot for [bot.generals.io](http://bot.generals.io).
 ```javascript
 export default {
   GAME_ID: '{theNameOfTheGameToJoin}',
-  BOT_USERNAME_1: '[Bot]botName',
+  BOT_NAME_1: '[Bot]botName',
   BOT_USER_ID_1: '{userIdFromLocalStorageFromIncognitoWindow}',
-  BOT_USERNAME_1: '[Bot]botName',
+  BOT_TYPE_1: 'bot',
+  BOT_NAME_2: '[Bot]botName',
   BOT_USER_ID_2: '{userIdFromLocalStorageFromIncognitoWindow}',
+  BOT_TYPE_2: 'enigma',
   // Set up multiple usernames/IDs so you can open a second tab and go to
   // /play/2, /play/3, etc. and have multiple bots join a game and play each other.
   ...
@@ -22,6 +24,7 @@ export default {
 > NOTE: Do not commit the file, or anyone could use your bot's identity
 
  - Open `bot.generals.io/games/{GAME_ID}`, and set desired game settings.
+ - Run `npm install` and `npm start`.
  - Open `localhost:3000/play/{botIdNumber}`, and the corresponding bot will join the game.
  - Click the force_start option in the bot UI and the lobby UI to start the game.
 
@@ -37,7 +40,6 @@ export default {
   - If you have grabbed x% of desired armies, bail out early and execute
 
 </details>
-
 
 <details>
 
