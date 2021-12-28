@@ -1,11 +1,16 @@
 import io from 'socket.io-client';
-import bot from './bots/bot';
-import enigma from './bots/enigma';
+import MurderBot from './bots/murderbot';
+import EnigmaBot from './bots/enigmabot';
 import config from './config';
 
 let forceStartFlag = false;
 let game = {};
 let ai;
+
+const BOT_MAP = {
+	"MurderBot": MurderBot,
+	"EnigmaBot": EnigmaBot,
+};
 
 const COLOR_MAP = [
 	'RED',
@@ -58,15 +63,17 @@ export function Quit () {
 }
 
 export function Team (gameId, team) {
-	socket.emit('set_custom_team', gameId, team)
+	socket.emit('set_custom_team', gameId, team);
+	document.getElementById("log").append(`\nTeam ${team} joined`);
 }
 
-export function BotType (botType) {
-	document.getElementById("log").append("\nSet BotType: " + botType);
-	if(botType === 'enigma') {
-		ai = enigma
+export function ChooseBotVariant (botVariant) {
+	if (BOT_MAP[botVariant]) {
+		ai = BOT_MAP[botVariant];
+		document.getElementById("log").append(`\n${botVariant} selected`);
 	} else {
-		ai = bot
+		ai = BOT_MAP.MurderBot;
+		document.getElementById("log").append(`\nUnrecognized bot variant '${botVariant}' selected. Defaulting to MurderBot`);
 	}
 }
 

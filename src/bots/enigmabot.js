@@ -116,9 +116,12 @@ let ai = {
   },
 
   findPath: function (location, targetLocation) {
-    let distanceMap = this.createDistanceMap(location)
-    let pathIndexes = this.findShortestPath(distanceMap, targetLocation)
-    console.log("New Path:" + JSON.stringify(pathIndexes))
+    let pathIndexes = [];
+    if (location && targetLocation) {
+      let distanceMap = this.createDistanceMap(location)
+      pathIndexes = this.findShortestPath(distanceMap, targetLocation)
+      console.log("New Path:" + JSON.stringify(pathIndexes))
+    }
     return pathIndexes;
   },
 

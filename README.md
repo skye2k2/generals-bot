@@ -23,10 +23,8 @@ export default {
 ```
 > NOTE: Do not commit the file, or anyone could use your bot's identity
 
-`npm install`
-`npm start`
-
  - Open `bot.generals.io/games/{GAME_ID}`, and set desired game settings.
+ - Run `npm install` and `npm start`.
  - Open `localhost:3000/play/{botIdNumber}`, and the corresponding bot will join the game.
  - Click the force_start option in the bot UI and the lobby UI to start the game.
 
@@ -42,7 +40,6 @@ export default {
   - If you have grabbed x% of desired armies, bail out early and execute
 
 </details>
-
 
 <details>
 
