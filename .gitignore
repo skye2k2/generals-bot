@@ -41,3 +41,4 @@ package-lock.json
 node_modules
 config.js
 helpers.js
+.idea/*
