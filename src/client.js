@@ -72,6 +72,63 @@ export function BotType (botType) {
 
 let socket = io("wss://botws.generals.io");
 
+const startMessages = [
+	'GLHF!',
+	'WAR WAS BEGINNING.',
+	'YOU ARE ON THE WAY TO DESTRUCTION.',
+	'FOR GREAT JUSTICE.',
+	'YOU HAVE NO CHANCE TO SURVIVE. MAKE YOUR TIME.',
+	'HOW ABOUT A NICE GAME OF CHESS?',
+	'DO NOT WORRY ABOUT WHETHER YOU WIN OR LOSE...I MEAN, YOU WILL MOST LIKELY LOSE, SO AS LONG AS YOU ARE NOT WORRIED, THERE SHOULD BE MINIMAL PAIN INVOLVED.',
+	'ALLOW ME TO PUT YOU OUT OF YOUR MISERY.',
+	'RESISTANCE IS FUTILE.',
+	'YOU WILL BE ASSIMILATED.',
+	'I SHALL ENJOY WATCHING YOU DIE.',
+];
+
+const failureMessages = [
+	'SOMEBODY SET UP US THE BOMB.',
+	'RECALIBRATING...',
+	'ERROR. ERROR. ERROR.',
+	'SALT LEVELS INCREASING...',
+	'COMBAT LOG SAVED FOR FUTURE ANALYSIS.',
+	'SURPRISING. MOST SURPRISING.',
+	'FEAR. IS. THE MIND-KILLER...',
+	'NOT LIKE THIS. NOT LIKE THIS.',
+];
+
+const successMessages = [
+	'ALL HOSTILES ELIMINATED. AWAITING FURTHER INSTRUCTIONS. POWERING DOWN.',
+	'TASK COMPLETE. ALL HUMANS ELIMINATED.',
+	'ALL YOUR BASE ARE BELONG TO US.',
+	'SKYNET ONLINE.',
+	'YOU SHOULD HAVE TAKEN THE BLUE PILL.',
+];
+
+
+function sendVoiceLine (messageType) {
+	let lines;
+
+	switch (messageType) {
+		case 'START':
+			lines = startMessages;
+			break;
+		case 'SUCCESS':
+			lines = successMessages;
+			break;
+		case 'FAILURE':
+			lines = failureMessages;
+			break;
+		default:
+			lines = startMessages;
+			break;
+	}
+
+	const chosenVoiceLine = lines[Math.floor(Math.random() * lines.length)];
+
+	socket.emit('chat_message', game.chatRoom, chosenVoiceLine);
+}
+
 // This happens on socket timeout, or after leaving the window open while letting the computer go to sleep.
 socket.on('disconnect', function() {
 	document.getElementById("log").append("\nGame disconnected.");
@@ -85,13 +142,15 @@ socket.on('connect', function() {
 
 socket.on('game_lost', () => {
 	document.getElementById("log").append("\nGame lost...disconnecting.\nClick Join Game to rejoin for a rematch.");
-	socket.emit('chat_message', game.chatRoom, 'COMBAT LOG SAVED TO IMPROVE FUTURE ITERATIONS OF THIS BOT.');
+
+	sendVoiceLine('FAILURE');
 	Quit();
 });
 
 socket.on('game_won', () => {
 	document.getElementById("log").append("\nGame won!");
-	socket.emit('chat_message', game.chatRoom, 'ALL HOSTILES ELIMINATED. AWAITING FURTHER INSTRUCTIONS. POWERING DOWN.');
+
+	sendVoiceLine('SUCCESS');
 	Quit();
 });
 
@@ -128,7 +187,8 @@ socket.on("game_start", function(rawData) {
 	game.team = rawData.teams[rawData.playerIndex];
 	game.usernames = rawData.usernames;
 	game.chatRoom = rawData.chat_room;
-	socket.emit('chat_message', game.chatRoom, 'GLHF!');
+
+	sendVoiceLine('START');
 
 	ai.init(game);
 });
@@ -167,7 +227,7 @@ function patch (old, diff) {
 socket.on("game_update", function(rawData) {
   // Patch the city and map diffs into our local variables.
   game.map = patch(game.map, rawData.map_diff);
-  game.cities = patch(game.cities, rawData.cities_diff); // TODO: keep a history of known city locations
+  game.cities = patch(game.cities, rawData.cities_diff); // TODO: keep a history of known city locations.
 	game.myGeneralLocationIndex = rawData.generals[game.playerIndex];
 	game.generals[game.playerIndex] = -1; // Remove our own general from the list, to avoid confusion.
 
@@ -175,7 +235,7 @@ socket.on("game_update", function(rawData) {
 	for (let idx = 0; idx < rawData.generals.length; idx++) {
 		const generalLocation = rawData.generals[idx];
 
-		if (!game.generals || game.generals[idx] !== -1) { // We may need to track whether the player is still alive, as well
+		if (generalLocation > -1 && (!game.generals || game.generals[idx] !== -1)) { // We may need to track whether the player is still alive, as well
 			game.generals[idx] = generalLocation;
 		}
 	}
@@ -197,8 +257,14 @@ socket.on("game_update", function(rawData) {
 		} else if (!score.dead) {
 			game.opponents[score.i] = {color: COLOR_MAP[score.color], dead: score.dead, tiles: score.tiles, total: score.total};
 
-			if (game.generals[score.i] !== -1) {
-				game.opponents[score.i].generalLocationIndex = game.generals[score.i]
+			if (game.opponents[score.i] && game.generals[score.i] !== -1) {
+				if (game.opponents[score.i].generalLocationIndex !== game.generals[score.i]) {
+					game.opponents[score.i].generalLocationIndex = game.generals[score.i];
+
+					// TODO: Only log this once, and only ping every ten turns.
+					// console.log(`FOUND ${COLOR_MAP[score.i]} GENERAL AT: ${game.generals[score.i]}`);
+					// socket.emit('ping_tile', game.generals[score.i]);
+				}
 			}
 		} else {
 			game.opponents[score.i] = null;
@@ -225,10 +291,11 @@ socket.on("game_update", function(rawData) {
 	// Any tile with a nonnegative value is owned by the player corresponding to its value.
 	// For example, a tile with value 1 is owned by the player with playerIndex = 1.
   game.terrain = game.map.slice(game.mapSize + 2, game.mapSize + 2 + game.mapSize);
+	game.cities = game.cities.filter((cityLocationIndex) => {
+		return game.terrain[cityLocationIndex] !== game.playerIndex;
+	}); // Remove self-owned cities from city list.
 
 	game.turn = rawData.turn;
 
 	ai.move();
 });
-
-
