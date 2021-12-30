@@ -1,6 +1,7 @@
 import io from 'socket.io-client';
 import MurderBot from './bots/murderbot';
 import EnigmaBot from './bots/enigmabot';
+import EnigmaBot2 from './bots/enigmabot2';
 import config from './config';
 
 let forceStartFlag = false;
@@ -170,8 +171,9 @@ socket.on("game_start", function(rawData) {
 		map: [],
 		generals: [], // The indices of generals we know of.
 		cities: [], // The indices of cities we have vision of.
-		armies: [],
-		terrain: [],
+		knownCities: [], // city indices that may or may not be currently visible.
+		armies: [], // The number of armies on each indices visible to player
+		terrain: [], // The type of terrain visible to player
 		mapWidth: null,
 		mapHeight: null,
 		mapSize: null,
@@ -247,6 +249,13 @@ socket.on("game_update", function(rawData) {
 		}
 	}
 
+	// Add to the list of discovered cities
+	game.cities.forEach((cityLocationIndex) => {
+		if(!game.knownCities.includes(cityLocationIndex)) {
+			game.knownCities.push(cityLocationIndex)
+		}
+	})
+
 	/**
 	 * Extract scoreboard and general state into actionable data, because scores is not sorted according to playerIndex.
 	 * playerIndex follows lobby order (playerIndex = 0 is the red player--generally lobby leader)?
@@ -262,7 +271,7 @@ socket.on("game_update", function(rawData) {
 
 			game.myScore = {...score, lostArmies, lostTerritory};
 		} else if (!score.dead) {
-			game.opponents[score.i] = {color: COLOR_MAP[score.color], dead: score.dead, tiles: score.tiles, total: score.total};
+			game.opponents[score.i] = {color: COLOR_MAP[score.color], dead: score.dead, tiles: score.tiles, total: score.total, availableArmies: (score.total-score.tiles)};
 
 			if (game.opponents[score.i] && game.generals[score.i] !== -1) {
 				if (game.opponents[score.i].generalLocationIndex !== game.generals[score.i]) {
@@ -274,10 +283,10 @@ socket.on("game_update", function(rawData) {
 				}
 			}
 		} else {
-			game.opponents[score.i] = null;
+			game.opponents[score.i] = -1;
 		}
 
-		return null;
+		return null
 	});
 
 	// Avoid resetting game constants every update
