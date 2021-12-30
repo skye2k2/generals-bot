@@ -12,10 +12,10 @@ export default {
   GAME_ID: '{theNameOfTheGameToJoin}',
   BOT_NAME_1: '[Bot]botName',
   BOT_USER_ID_1: '{userIdFromLocalStorageFromIncognitoWindow}',
-  BOT_TYPE_1: 'bot',
+  BOT_VARIANT_1: 'MurderBot',
   BOT_NAME_2: '[Bot]botName',
   BOT_USER_ID_2: '{userIdFromLocalStorageFromIncognitoWindow}',
-  BOT_TYPE_2: 'enigma',
+  BOT_VARIANT_2: 'EnigmaBot',
   // Set up multiple usernames/IDs so you can open a second tab and go to
   // /play/2, /play/3, etc. and have multiple bots join a game and play each other.
   ...
