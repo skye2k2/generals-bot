@@ -22,6 +22,7 @@ let ai = {
     emptyTerritories: [], // The map locations we can see that are free to conquer.
     foggedTerritories: [],
     visibleOpponentTerritories: [],
+    discoveredCities: [], // List of all cities that have been found during the game.  City may be currently fogged.
     unexploredTerritories: [], // The set of remaining board indices we have not yet explored while searching for generals.
     log: Array(5), // Set up limited-length history, with turn info, foreign policy, and other important data to track over time.
 
@@ -137,6 +138,13 @@ let ai = {
       if(attacker.armies > target.armies+1) {
         this.queuePathToTarget(attacker, target, "AttackBoarder")
       }
+    }
+
+    // Don't queue up new stuff if there is stuff to do.
+    if (this.game.intel.attackQueue.length < 1) {
+      // move largest army to random enemy Territory
+      const random = Math.floor(Math.random() * this.game.intel.visibleOpponentTerritories.length);
+      this.queuePathToTarget(this.game.intel.myArmies[0], this.game.intel.visibleOpponentTerritories[random], "AttackBoarder")
     }
 
     // Don't queue up new stuff if there is stuff to do.

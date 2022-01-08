@@ -137,6 +137,63 @@ function sendVoiceLine (messageType) {
 	socket.emit('chat_message', game.chatRoom, chosenVoiceLine);
 }
 
+const startMessages = [
+	'GLHF!',
+	'WAR WAS BEGINNING.',
+	'YOU ARE ON THE WAY TO DESTRUCTION.',
+	'FOR GREAT JUSTICE.',
+	'YOU HAVE NO CHANCE TO SURVIVE. MAKE YOUR TIME.',
+	'HOW ABOUT A NICE GAME OF CHESS?',
+	'DO NOT WORRY ABOUT WHETHER YOU WIN OR LOSE...I MEAN, YOU WILL MOST LIKELY LOSE, SO AS LONG AS YOU ARE NOT WORRIED, THERE SHOULD BE MINIMAL PAIN INVOLVED.',
+	'ALLOW ME TO PUT YOU OUT OF YOUR MISERY.',
+	'RESISTANCE IS FUTILE.',
+	'YOU WILL BE ASSIMILATED.',
+	'I SHALL ENJOY WATCHING YOU DIE.',
+];
+
+const failureMessages = [
+	'SOMEBODY SET UP US THE BOMB.',
+	'RECALIBRATING...',
+	'ERROR. ERROR. ERROR.',
+	'SALT LEVELS INCREASING...',
+	'COMBAT LOG SAVED FOR FUTURE ANALYSIS.',
+	'SURPRISING. MOST SURPRISING.',
+	'FEAR. IS. THE MIND-KILLER...',
+	'NOT LIKE THIS. NOT LIKE THIS.',
+];
+
+const successMessages = [
+	'ALL HOSTILES ELIMINATED. AWAITING FURTHER INSTRUCTIONS. POWERING DOWN.',
+	'TASK COMPLETE. ALL HUMANS ELIMINATED.',
+	'ALL YOUR BASE ARE BELONG TO US.',
+	'SKYNET ONLINE.',
+	'YOU SHOULD HAVE TAKEN THE BLUE PILL.',
+];
+
+
+function sendVoiceLine (messageType) {
+	let lines;
+
+	switch (messageType) {
+		case 'START':
+			lines = startMessages;
+			break;
+		case 'SUCCESS':
+			lines = successMessages;
+			break;
+		case 'FAILURE':
+			lines = failureMessages;
+			break;
+		default:
+			lines = startMessages;
+			break;
+	}
+
+	const chosenVoiceLine = lines[Math.floor(Math.random() * lines.length)];
+
+	socket.emit('chat_message', game.chatRoom, chosenVoiceLine);
+}
+
 // This happens on socket timeout, or after leaving the window open while letting the computer go to sleep.
 socket.on('disconnect', function() {
 	document.getElementById("log").append("\nGame disconnected.");
@@ -261,7 +318,7 @@ socket.on("game_update", function(rawData) {
 	 * playerIndex follows lobby order (playerIndex = 0 is the red player--generally lobby leader)?
 	 * generals with a location of -1 are unknown.
 	 * scores data format: [{total, tiles, i, color, dead}]
-	 * Populates game.opponents array with scoreboard details for living opponents and null for dead players.
+	 * Populates game.opponents array with scoreboard details for living opponents and undefined for dead players.
 	 */
 	rawData.scores.map((score) => {
 		// TODO: Take teammates from rawData.teams into account & keep separate from opponents
@@ -285,7 +342,6 @@ socket.on("game_update", function(rawData) {
 		} else {
 			game.opponents[score.i] = -1;
 		}
-
 		return null
 	});
 
