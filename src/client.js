@@ -1,7 +1,6 @@
 import io from 'socket.io-client';
 import MurderBot from './bots/murderbot';
 import EnigmaBot from './bots/enigmabot';
-import EnigmaBot2 from './bots/enigmabot2';
 import config from './config';
 
 let forceStartFlag = false;
@@ -79,63 +78,6 @@ export function ChooseBotVariant (botVariant) {
 }
 
 let socket = io("wss://botws.generals.io");
-
-const startMessages = [
-	'GLHF!',
-	'WAR WAS BEGINNING.',
-	'YOU ARE ON THE WAY TO DESTRUCTION.',
-	'FOR GREAT JUSTICE.',
-	'YOU HAVE NO CHANCE TO SURVIVE. MAKE YOUR TIME.',
-	'HOW ABOUT A NICE GAME OF CHESS?',
-	'DO NOT WORRY ABOUT WHETHER YOU WIN OR LOSE...I MEAN, YOU WILL MOST LIKELY LOSE, SO AS LONG AS YOU ARE NOT WORRIED, THERE SHOULD BE MINIMAL PAIN INVOLVED.',
-	'ALLOW ME TO PUT YOU OUT OF YOUR MISERY.',
-	'RESISTANCE IS FUTILE.',
-	'YOU WILL BE ASSIMILATED.',
-	'I SHALL ENJOY WATCHING YOU DIE.',
-];
-
-const failureMessages = [
-	'SOMEBODY SET UP US THE BOMB.',
-	'RECALIBRATING...',
-	'ERROR. ERROR. ERROR.',
-	'SALT LEVELS INCREASING...',
-	'COMBAT LOG SAVED FOR FUTURE ANALYSIS.',
-	'SURPRISING. MOST SURPRISING.',
-	'FEAR. IS. THE MIND-KILLER...',
-	'NOT LIKE THIS. NOT LIKE THIS.',
-];
-
-const successMessages = [
-	'ALL HOSTILES ELIMINATED. AWAITING FURTHER INSTRUCTIONS. POWERING DOWN.',
-	'TASK COMPLETE. ALL HUMANS ELIMINATED.',
-	'ALL YOUR BASE ARE BELONG TO US.',
-	'SKYNET ONLINE.',
-	'YOU SHOULD HAVE TAKEN THE BLUE PILL.',
-];
-
-
-function sendVoiceLine (messageType) {
-	let lines;
-
-	switch (messageType) {
-		case 'START':
-			lines = startMessages;
-			break;
-		case 'SUCCESS':
-			lines = successMessages;
-			break;
-		case 'FAILURE':
-			lines = failureMessages;
-			break;
-		default:
-			lines = startMessages;
-			break;
-	}
-
-	const chosenVoiceLine = lines[Math.floor(Math.random() * lines.length)];
-
-	socket.emit('chat_message', game.chatRoom, chosenVoiceLine);
-}
 
 const startMessages = [
 	'GLHF!',
