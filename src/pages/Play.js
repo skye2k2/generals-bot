@@ -9,7 +9,7 @@ export default function Play({ match }) {
   let bot = {
     id: config[`BOT_USER_ID_${botId}`],
     name: config[`BOT_NAME_${botId}`],
-    variant: 'MurderBot',
+    variant: config[`BOT_VARIANT_${botId}`],
   }
 
   const [teamValue, setTeamValue] = useState();

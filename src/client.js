@@ -170,8 +170,9 @@ socket.on("game_start", function(rawData) {
 		map: [],
 		generals: [], // The indices of generals we know of.
 		cities: [], // The indices of cities we have vision of.
-		armies: [],
-		terrain: [],
+		knownCities: [], // city indices that may or may not be currently visible.
+		armies: [], // The number of armies on each indices visible to player
+		terrain: [], // The type of terrain visible to player
 		mapWidth: null,
 		mapHeight: null,
 		mapSize: null,
@@ -247,12 +248,19 @@ socket.on("game_update", function(rawData) {
 		}
 	}
 
+	// Add to the list of discovered cities
+	game.cities.forEach((cityLocationIndex) => {
+		if(!game.knownCities.includes(cityLocationIndex)) {
+			game.knownCities.push(cityLocationIndex)
+		}
+	})
+
 	/**
 	 * Extract scoreboard and general state into actionable data, because scores is not sorted according to playerIndex.
 	 * playerIndex follows lobby order (playerIndex = 0 is the red player--generally lobby leader)?
 	 * generals with a location of -1 are unknown.
 	 * scores data format: [{total, tiles, i, color, dead}]
-	 * Populates game.opponents array with scoreboard details for living opponents and null for dead players.
+	 * Populates game.opponents array with scoreboard details for living opponents and undefined for dead players.
 	 */
 	rawData.scores.map((score) => {
 		// TODO: Take teammates from rawData.teams into account & keep separate from opponents
@@ -262,7 +270,7 @@ socket.on("game_update", function(rawData) {
 
 			game.myScore = {...score, lostArmies, lostTerritory};
 		} else if (!score.dead) {
-			game.opponents[score.i] = {color: COLOR_MAP[score.color], dead: score.dead, tiles: score.tiles, total: score.total};
+			game.opponents[score.i] = {color: COLOR_MAP[score.color], dead: score.dead, tiles: score.tiles, total: score.total, availableArmies: (score.total-score.tiles)};
 
 			if (game.opponents[score.i] && game.generals[score.i] !== -1) {
 				if (game.opponents[score.i].generalLocationIndex !== game.generals[score.i]) {
@@ -274,10 +282,9 @@ socket.on("game_update", function(rawData) {
 				}
 			}
 		} else {
-			game.opponents[score.i] = null;
+			game.opponents[score.i] = -1;
 		}
-
-		return null;
+		return null
 	});
 
 	// Avoid resetting game constants every update
