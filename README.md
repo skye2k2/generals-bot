@@ -28,6 +28,18 @@ export default {
  - Open `localhost:3000/play/{botIdNumber}`, and the corresponding bot will join the game.
  - Click the force_start option in the bot UI and the lobby UI to start the game.
 
+<details open>
+
+<summary>Features:</summary>
+
+- Base game mesaging and intelligence is calculated in the client and passed to all bot variants
+- Ability to load multiple bot variants
+- Game logic runs entirely in the client browser
+- Unit tests ensure that calculations run as expected
+- ESLint, Prettier, & pre-commit hooks (sorry it took so long, other developers)
+
+</details>
+
 <details>
 
 <summary>To-Do List:</summary>

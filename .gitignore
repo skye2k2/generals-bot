@@ -42,3 +42,4 @@ node_modules
 config.js
 helpers.js
 .idea/*
+.eslintcache

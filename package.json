@@ -1,7 +1,7 @@
 {
   "name": "generals-bot",
-  "version": "0.0.1",
-  "description": "A bot for bot.generals.io",
+  "version": "0.0.2",
+  "description": "A framework for bot.generals.io bots",
   "main": "index.html",
   "author": "skye2k2",
   "keywords": [
@@ -11,14 +11,6 @@
     "javascript",
     "example"
   ],
-  "eslintConfig": {
-    "extends": "react-app"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test"
-  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -31,14 +23,69 @@
       "last 1 safari version"
     ]
   },
-  "dependencies": {
-    "grommet": "^2.7.11",
-    "react": "^16.11.0",
-    "react-dom": "^16.11.0",
-    "react-router-dom": "^5.1.2",
-    "react-scripts": "^3.2.0",
-    "socket.io-client": "^2.3.0",
-    "styled-components": "^4.4.1"
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm run lint && npm run test:ci"
+    }
   },
-  "devDependencies": {}
+  "lint-staged": {
+    "*.{js,jsx}": [
+      "eslint --cache --fix"
+    ]
+  },
+  "dependencies": {
+    "grommet": "^2",
+    "react": "^16",
+    "react-dom": "^16",
+    "react-router-dom": "^5",
+    "react-scripts": "^3",
+    "socket.io-client": "^2",
+    "styled-components": "^4"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7",
+    "@babel/eslint-plugin": "^7",
+    "@babel/plugin-syntax-jsx": "^7",
+    "eslint": "^7",
+    "eslint-config-prettier": "^8",
+    "eslint-plugin-bestpractices": "git+https://github.com/skye2k2/eslint-plugin-bestpractices.git",
+    "eslint-plugin-jsdoc": "^36",
+    "eslint-plugin-prettier": "^4",
+    "eslint-plugin-sonarjs": "^0.10",
+    "husky": "~3.1",
+    "lint-staged": "^11"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "lint": "eslint --cache '**/*.+(js|jsx)'",
+    "lint:noprettier": "eslint --cache --rule 'prettier/prettier: [0]' '**/*.+(js|jsx)'",
+    "lint:fix": "eslint --cache --fix '**/*.+(js|jsx)'",
+    "lint:staged": "lint-staged",
+    "test": "react-scripts test",
+    "test:custom": "react-scripts test -- --config jest.config.js",
+    "test:ci": "CI=true npm test -- --silent --colors --coverage"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "src/bots/**/*.{js,jsx}",
+      "!<rootDir>/**/*test*.*"
+    ],
+    "coverageReporters": [
+      "json",
+      "lcov",
+      "text",
+      "text-summary",
+      "html"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 15,
+        "functions": 20,
+        "lines": 25,
+        "statements": 25
+      }
+    }
+  }
 }
