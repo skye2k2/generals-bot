@@ -35,7 +35,7 @@ const DIRECTIONS_MAP = [
 	'west',
 ];
 
-const OPENING_GAME_TURN_THRESHOLD = 50;
+// const OPENING_GAME_TURN_THRESHOLD = 50;
 const EARLY_GAME_TURN_THRESHOLD = 100;
 const MID_GAME_TURN_THRESHOLD = 200;
 
@@ -44,27 +44,28 @@ const TERRAIN_EMPTY = -1;
 // const TERRAIN_FOG = -3;
 // const TERRAIN_FOG_MTN = -4;
 
+// TODO: If we make the data arrays into sets, we don't have to worry about pushing repeat state, like known city locations
+const INTEL_DEFAULTS = {
+	attackQueue: [],
+	emergencyOrdersStandUntilTurnNumber: null,
+	foreignPolicy: 'EXPLORE',
+	log: Array(5), // Set up limited-length history, with turn info, foreign policy, and other important data to track over time.
+	myScore: {total: 0, tiles: 0, lostArmies: false, lostTerritory: false},
+	myTopArmies: [], // The map locations we own that have a minimum number of armies available.
+	emptyTerritories: [], // The map locations we can see that are free to conquer.
+	visibleOpponentTerritories: [],
+	unexploredTerritories: [], // The set of remaining board indices we have not yet explored while searching for generals.
+	undiscovered: true, // Whether we have not been seen, yet.
+	USEFUL_ARMY_THRESHOLD: 2,
+};
+
 
 let ai = {
 	game: undefined,
-	// TODO: If we make the data arrays into sets, we don't have to worry about pushing repeat state, like known city locations
-	intel: {
-		attackQueue: [],
-		emergencyOrdersStandUntilTurnNumber: null,
-		foreignPolicy: 'EXPLORE',
-		log: Array(5), // Set up limited-length history, with turn info, foreign policy, and other important data to track over time.
-		opponents: [],
-		myScore: {total: 0, tiles: 0, lostArmies: false, lostTerritory: false},
-		myTopArmies: [], // The map locations we own that have a minimum number of armies available.
-		emptyTerritories: [], // The map locations we can see that are free to conquer.
-		visibleOpponentTerritories: [],
-		unexploredTerritories: [], // The set of remaining board indices we have not yet explored while searching for generals.
-		undiscovered: true, // Whether we have not been seen, yet.
-		USEFUL_ARMY_THRESHOLD: 2,
-	},
 
 	init: function (game) {
 		this.game = game;
+		this.game.intel = JSON.parse(JSON.stringify(INTEL_DEFAULTS));
 	},
 
 	/**
@@ -72,7 +73,7 @@ let ai = {
 	 * @param {*} game - The game state that we determine actions from.
 	 */
 	move: function () {
-		this.game.intel = this.intel; // Re-initialize intel
+		this.game.intel = JSON.parse(JSON.stringify(INTEL_DEFAULTS)); // Deep copy re-initialize intel
 		this.determineIntel();
 		this.determineForeignPolicy();
 		this.determineMoves();
@@ -92,7 +93,6 @@ let ai = {
 	 * Calculate queue of attack moves to accomplish foreignPolicy goal
 	 */
 	determineMoves: function () {
-
 		// TODO: Don't create new moves unless something has changed, like foreignPolicy.
 		if (this.game.intel.attackQueue.length) {
 			return
@@ -121,7 +121,7 @@ let ai = {
 				// } else if (myGeneralPower > opponentGeneralPower * 0.75) {
 				// 	sourceArmyLocationIndex = this.game.myGeneralLocationIndex;
 				// }
-				sourceArmyLocationIndex = this.game.intel.myTopArmies[0].locationIndex;
+				sourceArmyLocationIndex = this.game.intel?.myTopArmies[0]?.locationIndex;
 
 				if (sourceArmyLocationIndex !== undefined) {
 					const pathToEnemyGeneral = this.calculatePath(sourceArmyLocationIndex, enemyGeneralLocationIndex);
@@ -472,7 +472,7 @@ let ai = {
 	 * Locations with a terrain index != playerIndex are enemy locations.
 	 */
 	 parseMap: function () {
-		if (this.game.turn === 1) {
+		if (this.game.turn === 1 || this.game.intel.unexploredTerritories.length === 0) {
 			this.game.intel.unexploredTerritories = new Set([...Array(this.game.mapSize).keys()]);
 		}
 
@@ -489,6 +489,7 @@ let ai = {
 				this.game.intel.emptyTerritories.push(idx);
 			} else if (this.game.terrain[idx] === this.game.playerIndex) {
 				this.game.intel.unexploredTerritories.delete(idx);
+				// TODO: CHECK IF WE ARE LEAVING MOUNTAINS IN THIS LIST UNNECESSARILY
 				if (this.game.armies[idx] > 1) {
 					this.game.intel.myStandingArmies.push({locationIndex: idx, locationPower: this.game.armies[idx] - 1});
 					if (this.game.armies[idx] >= this.game.intel.USEFUL_ARMY_THRESHOLD) {
@@ -497,7 +498,7 @@ let ai = {
 							this.game.intel.myTopArmies.push({locationIndex: idx, locationPower: this.game.armies[idx] - 1}); // Subtract one from the power here, because any attack always leaves one army behind
 						}
 					}
-					this.game.intel.totalAvailableArmyPower += this.game.armies[idx];
+					this.game.intel.totalAvailableArmyPower += this.game.armies[idx] - 1;
 				}
 			} else if (this.game.terrain[idx] > TERRAIN_EMPTY && this.game.terrain[idx] !== this.game.playerIndex) {
 				this.game.intel.undiscovered = false;
@@ -511,6 +512,12 @@ let ai = {
 	},
 
 	/* IN-PROGRESS CORNER (UNUSED BETA FUNCTIONS) */
+
+	// TODO: Track if our general position is known generally, in addition to which index/color/team knew of our location. When a player/team is eliminated, unset the danger meter for them.
+
+	// TODO: Function to check if an enemy position is in one of the eight danger spaces around our general
+
+	// TODO: Track large armies, plot a path home for each of them, one at a time. For each stop, check to see if they are immediately next to another large army. If so, pull that one in, and remove from the large armies list. Repeat
 
 	// Recursive
 	// You can pass in a locationIndex or a locationInfo, in addition to the list of armies of significance. The initial sourceArmies should be this.game.intel.myTopArmies, and tempQueue is an accumulator.
@@ -580,7 +587,7 @@ let ai = {
 			}
 		});
 
-		if (primaryDirectionToFlood === 'north' || primaryDirectionToFlood === 'west') {
+		if (reversedOrder) {
 			collectedArmies = collectedArmies.reverse();
 		}
 

@@ -1,4 +1,3 @@
-import io from 'socket.io-client';
 import MurderBot from './bots/murderbot';
 import EnigmaBot from './bots/enigmabot';
 import config from './config';
@@ -6,6 +5,7 @@ import config from './config';
 let forceStartFlag = false;
 let game = {};
 let ai;
+let socket;
 
 const BOT_MAP = {
 	"MurderBot": MurderBot,
@@ -77,7 +77,15 @@ export function ChooseBotVariant (botVariant) {
 	}
 }
 
-let socket = io("wss://botws.generals.io");
+export function InitializeSocket (externallyConfiguredSocket) {
+	socket = externallyConfiguredSocket;
+	socket.on('connect', connect);
+	socket.on('game_start', start);
+	socket.on('game_update', update);
+	socket.on('game_lost', lose);
+	socket.on('game_won', win);
+	socket.on('disconnect', disconnect);
+}
 
 const startMessages = [
 	'GLHF!',
@@ -136,32 +144,19 @@ function sendVoiceLine (messageType) {
 	socket.emit('chat_message', game.chatRoom, chosenVoiceLine);
 }
 
-// This happens on socket timeout, or after leaving the window open while letting the computer go to sleep.
-socket.on('disconnect', function() {
-	document.getElementById("log").append("\nGame disconnected.");
-});
 
-socket.on('connect', function() {
+function connect () {
 	// Setting the bot name only needs to be done once, ever. See API for more details.
 	// socket.emit('set_username', config.BOT_USER_ID, config.BOT_NAME);
 	// socket.emit('play', config.BOT_USER_ID); // Join the FFA queue
-});
+};
 
-socket.on('game_lost', () => {
-	document.getElementById("log").append("\nGame lost...disconnecting.\nClick Join Game to rejoin for a rematch.");
+// This happens on socket timeout, or after leaving the window open while letting the computer go to sleep.
+function disconnect () {
+	document.getElementById("log").append("\nGame disconnected.");
+};
 
-	sendVoiceLine('FAILURE');
-	Quit();
-});
-
-socket.on('game_won', () => {
-	document.getElementById("log").append("\nGame won!");
-
-	sendVoiceLine('SUCCESS');
-	Quit();
-});
-
-socket.on("game_start", function(rawData) {
+function start (rawData) {
   document.getElementById("log").innerHTML = "Game starting...";
 	// Initialize/Re-initialize game state used by both bot and client.
 	game = {
@@ -199,7 +194,7 @@ socket.on("game_start", function(rawData) {
 	sendVoiceLine('START');
 
 	ai.init(game);
-});
+};
 
 /* Returns a new array created by patching the diff into the old array.
  * The diff formatted with alternating matching and mismatching segments:
@@ -232,7 +227,7 @@ function patch (old, diff) {
   return out;
 }
 
-socket.on("game_update", function(rawData) {
+function update (rawData) {
   // Patch the city and map diffs into our local variables.
   game.map = patch(game.map, rawData.map_diff);
   game.cities = patch(game.cities, rawData.cities_diff); // TODO: keep a history of known city locations.
@@ -312,4 +307,18 @@ socket.on("game_update", function(rawData) {
 	game.turn = rawData.turn;
 
 	ai.move();
-});
+};
+
+function lose () {
+	document.getElementById("log").append("\nGame lost...disconnecting.\nClick Join Game to rejoin for a rematch.");
+
+	sendVoiceLine('FAILURE');
+	Quit();
+};
+
+function win () {
+	document.getElementById("log").append("\nGame won!");
+
+	sendVoiceLine('SUCCESS');
+	Quit();
+};

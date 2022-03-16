@@ -1,7 +1,12 @@
 import React, {useState} from "react";
-import { ForceStart, Join, Quit, Team, ChooseBotVariant } from "../../src/client.js";
+import { ForceStart, Join, Quit, Team, ChooseBotVariant, InitializeSocket } from "../../src/client.js";
 import { Button, Box, Select } from "grommet";
 import config from '../config'
+import io from 'socket.io-client';
+
+const socket = io("wss://botws.generals.io");
+
+InitializeSocket(socket);
 
 export default function Play({ match }) {
   const botId = match.params.bot
