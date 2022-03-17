@@ -1,9 +1,9 @@
-import React from "react";
-import { Anchor, Box, Heading } from "grommet";
-import { Link } from "react-router-dom";
+import React from "react"
+import { Anchor, Box, Heading } from "grommet"
+import { Link } from "react-router-dom"
 import config from '../config'
 
-const BOT_NUMBER = (window.location.pathname.includes('/play/')) ? window.location.pathname.replace('/play/', '') : '';
+const BOT_NUMBER = (window.location.pathname.includes('/play/')) ? window.location.pathname.replace('/play/', '') : ''
 
 // TODO: Change the header color to match the bot color
 
@@ -26,5 +26,5 @@ export default function Header() {
         </Link>
       </Box>
     </Box>
-  );
+  )
 }

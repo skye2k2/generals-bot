@@ -98,7 +98,7 @@ describe('MurderBot', () => {
           if (move.targetIndex === 24) {
             expect(move).toEqual(expect.objectContaining({mode: 'MURDER', targetIndex: 24}))
           }
-        });
+        })
       })
     })
 
@@ -128,7 +128,7 @@ describe('MurderBot', () => {
           if (move.targetIndex === 6) {
             expect(move).toEqual(expect.objectContaining({mode: 'DEFEND', targetIndex: 6}))
           }
-        });
+        })
       })
     })
   })

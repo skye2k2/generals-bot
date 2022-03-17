@@ -19,7 +19,7 @@ export const gameDefaults = {
   // TODO: opponents is still not coming through to be used as expected
   turn: 25,
   gameOver: false,
-};
+}
 
 // const TILE_EMPTY = -1;
 // const TILE_MOUNTAIN = -2;
@@ -84,7 +84,7 @@ const terrainOptions = {
     -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1,
   ],
-};
+}
 
 /**
  * Initialize one of multiple known game states, for automated testing of bot logic.
@@ -93,20 +93,20 @@ const terrainOptions = {
  * @returns {object} - A game object initialized into the requested state.
  */
 export function initializeGameState (terrainMode, armyMode) {
-  const game = gameDefaults;
+  const game = gameDefaults
 
-  game.terrain = terrainOptions[terrainMode];
-  game.armies = armyOptions[armyMode];
+  game.terrain = terrainOptions[terrainMode]
+  game.armies = armyOptions[armyMode]
 
   if (game.terrain && game.armies) {
     // console.dir(game);
-    return game;
+    return game
   } else {
-    console.warn(`Unrecognized game option(s) received: ${terrainMode}, ${armyMode}`);
-    return null;
+    console.warn(`Unrecognized game option(s) received: ${terrainMode}, ${armyMode}`)
+    return null
   }
 
-};
+}
 
 export function simulateMove (game) { // maybe need to pass the entire bot
   // IF THERE IS A MOVE QUEUED, UPDATE GAME STATE ACCORDINGLY (turn, armies, terrain, visible general, win)

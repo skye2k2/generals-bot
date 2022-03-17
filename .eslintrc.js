@@ -47,7 +47,7 @@ module.exports = {
   rules: {
     'bestpractices/no-eslint-disable': 'warn',
 
-    'no-console': 'warn',
+    'no-console': 'off', // We use the console heavily for game client debugging
     'jsdoc/check-access': 'off',
     'jsdoc/check-alignment': 'warn',
     'jsdoc/check-examples': 'warn',
@@ -134,5 +134,16 @@ module.exports = {
     'sonarjs/prefer-single-boolean-return': 'warn',
     'sonarjs/prefer-while': 'warn',
 
-  }
+  },
+
+  overrides: [
+    {
+      files: ['**/*.test.{js}', '**/*theme.js'],
+      rules: {
+        'sonarjs/cognitive-complexity': ['warn', 50],
+        'sonarjs/no-duplicate-string': 'off',
+        'sonarjs/no-identical-functions': 'off',
+      },
+    },
+  ],
 }

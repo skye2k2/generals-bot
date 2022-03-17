@@ -1,38 +1,40 @@
-import React, {useState} from "react";
 import { ForceStart, Join, Quit, Team, ChooseBotVariant, InitializeSocket } from "../../src/client.js";
-import { Button, Box, Select } from "grommet";
+import React, {useState} from "react"
+import { Button, Box, Select } from "grommet"
 import config from '../config'
-import io from 'socket.io-client';
+import io from 'socket.io-client'
 
-const socket = io("wss://botws.generals.io");
+const socket = io("wss://botws.generals.io")
 
-InitializeSocket(socket);
+InitializeSocket(socket)
+
 
 export default function Play({ match }) {
   const botId = match.params.bot
 
-  let bot = {
+  const bot = {
     id: config[`BOT_USER_ID_${botId}`],
     name: config[`BOT_NAME_${botId}`],
     variant: config[`BOT_VARIANT_${botId}`],
   }
 
-  const [teamValue, setTeamValue] = useState();
-  const [botVariantValue, setBotVariantValue] = useState(bot.variant);
+  const [teamValue, setTeamValue] = useState()
+  const [botVariantValue, setBotVariantValue] = useState(bot.variant)
   const handleTeamChange = (option) => {
-    setTeamValue(option);
-    Team(config.GAME_ID, option);
+    setTeamValue(option)
+    Team(config.GAME_ID, option)
   }
+  // TODO: Load a different default bot variant for each ID
   // TODO: Remember bot variant chosen across refreshes
   const handleBotVariantChange = (option) => {
-    setBotVariantValue(option);
-    ChooseBotVariant(option);
+    setBotVariantValue(option)
+    ChooseBotVariant(option)
   }
 
   setTimeout(() => {
-    Join(bot.id, bot.name);
-    ChooseBotVariant(botVariantValue || bot.variant);
-  });
+    Join(bot.id, bot.name)
+    ChooseBotVariant(botVariantValue || bot.variant)
+  })
 
   return (
     <>
@@ -41,13 +43,13 @@ export default function Play({ match }) {
         <div>
           <Button
             onClick={() => {
-              ForceStart();
+              ForceStart()
             }}
             label="Force Start"
           ></Button>
           <Button
             onClick={() => {
-              Join(bot.id, bot.name);
+              Join(bot.id, bot.name)
             }}
             label="Join Game"
           ></Button>
@@ -67,7 +69,7 @@ export default function Play({ match }) {
           />
           <Button
             onClick={() => {
-              Quit();
+              Quit()
             }}
             label="Quit"
           ></Button>
@@ -80,5 +82,5 @@ export default function Play({ match }) {
         </pre>
       </Box>
     </>
-  );
+  )
 }
