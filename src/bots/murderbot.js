@@ -62,8 +62,10 @@ const INTEL_DEFAULTS = {
 
 const ai = {
 	game: null,
+	gameLog: null,
 
 	init: function (game) {
+		this.gameLog = (document.getElementById("log"))
 		this.game = game
 		this.game.intel = JSON.parse(JSON.stringify(INTEL_DEFAULTS))
 	},
@@ -81,10 +83,19 @@ const ai = {
 			// AS LONG AS FOREIGN POLICY DOES NOT DRAMATICALLY CHANGE, WORK THROUGH FIFO QUEUE OF MOVES
 			const currentMove = this.game.intel.attackQueue.shift()
 			const moveInfo = `TURN ${this.game.turn}: ${currentMove.mode}: ${currentMove.attackerIndex} --> ${currentMove.targetIndex} ${(currentMove.sendHalf) ? ' (HALF)' : ''}`
-			console.log(moveInfo)
 			this.game.intel.log.unshift({mode: currentMove.mode, attackerIndex: currentMove.attackerIndex, targetIndex: currentMove.targetIndex}) // push to front of log array--returns new length
 			this.game.intel.log.length = 5
 			this.game.socket.emit("attack", currentMove.attackerIndex, currentMove.targetIndex, currentMove.sendHalf)
+
+			// It seems like if the page is not focused, moves are delayed enough to cause duplicate moves. Look into this.
+			if (document.hasFocus()) {
+				if (this.gameLog) {
+					this.gameLog.append(`\n${moveInfo}`)
+				}
+			} else {
+				console.log(moveInfo)
+			}
+
 		}
 	},
 

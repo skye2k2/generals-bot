@@ -9,22 +9,22 @@ const BOT_NUMBER = (window.location.pathname.includes('/play/')) ? window.locati
 
 export default function Header() {
   return (
-    <Box background="brand" pad="medium" direction="row" align="center">
+    <Box background="brand" pad="small" direction="row" align="center">
       { (BOT_NUMBER) &&
-        <Heading level="1" margin="medium">
-        {config[`BOT_NAME_${BOT_NUMBER}`]} {BOT_NUMBER} (generals.io)
-      </Heading>
+        <Heading level="2" margin="xsmall">
+          {config[`BOT_NAME_${BOT_NUMBER}`]} {BOT_NUMBER} (generals.io)
+        </Heading>
 }
-      <Box margin="small">
-        <Link component={Anchor} to="/play">
-          Play
-        </Link>
-      </Box>
-      <Box margin="small">
-        <Link component={Anchor} to="/test">
-          Test
-        </Link>
-      </Box>
+        <Box margin="small">
+          <Link component={Anchor} to="/play">
+            Play
+          </Link>
+        </Box>
+        <Box margin="small">
+          <Link component={Anchor} to="/test">
+            Test
+          </Link>
+        </Box>
     </Box>
   )
 }

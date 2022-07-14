@@ -1,0 +1,148 @@
+/* Stolen from: https://bot.generals.io/generals-main-prod-v28.1.5.0.css */
+
+#gameMap {
+  border-spacing: 0px;
+  margin: 0 auto;
+  max-width: fit-content;
+  table-layout: fixed;
+  user-select: none;
+}
+
+#gameMap td {
+  background: #dcdcdc;
+  border: 1px solid #000;
+  color: #fff;
+  font-size: 15px;
+  opacity: 1;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: 1px 1px 2px #000;
+  white-space: nowrap;
+  height: 26px;
+  line-height: 26px;
+  max-height: 26px;
+  max-width: 26px;
+  min-height: 26px;
+  min-width: 26px;
+  width: 26px;
+}
+
+#gameMap td.city,
+#gameMap td.general,
+#gameMap td.light,
+#gameMap td.mountain,
+#gameMap td.obstacle,
+#gameMap td.swamp {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.red {
+  background-color: #f00 !important;
+  fill: #f00 !important;
+}
+
+.lightblue {
+  background-color: #4363d8 !important;
+  fill: #4363d8 !important;
+}
+
+.green {
+  background-color: #080 !important;
+  fill: #080 !important;
+}
+
+.teal {
+  background-color: teal !important;
+  fill: teal !important;
+}
+
+.purple {
+  background-color: purple !important;
+  fill: purple !important;
+}
+
+.blue {
+  background-color: #00f !important;
+  fill: #00f !important;
+}
+
+.orange {
+  background-color: #f58231 !important;
+  fill: #f58231 !important;
+}
+
+.maroon {
+  background-color: #800000 !important;
+  fill: #800 !important;
+}
+
+.yellow {
+  background-color: #b09f30 !important;
+  fill: #b09f30 !important;
+}
+
+.pink {
+  background-color: #f032e6 !important;
+  fill: #f032e6 !important;
+}
+
+.brown {
+  background-color: #9a6324 !important;
+  fill: #9a6324 !important;
+}
+
+.lightgreen {
+  background-color: #7ab78c !important;
+  fill: #7ab78c !important;
+}
+
+.purple-blue {
+  background-color: #483d8b !important;
+  fill: darkslateblue !important;
+}
+
+.white {
+  fill: white !important;
+}
+
+#gameMap td.city {
+  background-color: gray;
+  background-image: url('https://bot.generals.io/city.png');
+}
+
+#gameMap td.neutral {
+  background-color: gray;
+}
+
+#gameMap td.general {
+  background-image: url('https://bot.generals.io/crown.png');
+}
+
+#gameMap td.mountain {
+  background-image: url('https://bot.generals.io/mountain.png');
+  background-color: #bbb
+}
+
+#gameMap td.obstacle {
+  background-image: url('https://bot.generals.io/obstacle.png');
+}
+
+#gameMap td.swamp {
+  background-image: url('https://bot.generals.io/swamp.png');
+  background-color: gray;
+}
+
+#gameMap td.light {
+  background-image: url('https://bot.generals.io/light.png');
+}
+
+#gameMap td.fog {
+  border: 1px solid transparent;
+  /* background-color was modified, because the hosted game board may potentially have a dark background */
+  background-color: rgba(0, 0, 0, 0.55);
+}

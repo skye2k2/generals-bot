@@ -21,7 +21,7 @@ export default {
   ...
 }
 ```
-> NOTE: Do not commit the file, or anyone could use your bot's identity
+> NOTE: Do not commit the config file, or anyone could use your bot's identity
 
  - Open `bot.generals.io/games/{GAME_ID}`, and set desired game settings.
  - Run `npm install` and `npm start`.
@@ -32,10 +32,13 @@ export default {
 
 <summary>Features:</summary>
 
-- Base game mesaging and intelligence is calculated in the client and passed to all bot variants
+- Base game configuration, eventing, and intelligence is calculated in the client and passed to all bot variants
 - Ability to load multiple bot variants
 - Game logic runs entirely in the client browser
+- Sticky game settings on a per-bot basis
 - Unit tests ensure that calculations run as expected
+- IN-PROGRESS: Test bed, where AI can be tested step-by-step in deterministic scenarios
+- IN-PROGRESS: Live updating map that can also be used to send attack/defend commands to the bot
 - ESLint, Prettier, & pre-commit hooks (sorry it took so long, other developers)
 
 </details>
@@ -44,6 +47,12 @@ export default {
 
 <summary>To-Do List:</summary>
 
+- Efficient army consolidation, when discovered by a more powerful opponent
+- Ruthless declaration of war, if an opponent with a known general location suddenly becomes vulnerable
+- Ability to abort extended operations, if field conditions suddenly change
+- Targeted exploration, not just random movement
+- Add teammate recognition and ping generation and acknowledgement
+- Send game logs to log section, instead of console
 - On turn 50, consolidate all newly-generated troops and either attack, expand, explore, or defend
 - Fuzzy recursive logic for army consolidation
   - Identify location of target

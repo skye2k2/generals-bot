@@ -8,6 +8,7 @@ import {
 } from "react-router-dom"
 import Header from "./components/Header"
 import theme from "./theme"
+import "./board-styles.css"
 
 const Home = lazy(() => import("./pages/Home"))
 const Play = lazy(() => import("./pages/Play"))

@@ -1,9 +1,9 @@
-let game = {};
 import MurderBot from './bots/murderbot'
 import EnigmaBot from './bots/enigmabot'
 import config from './config'
 
 let forceStartFlag = false
+let game = {}
 let ai
 let socket
 
@@ -77,8 +77,8 @@ export function ChooseBotVariant (botVariant) {
 	}
 }
 
-export function FetchMap () {
-	return game.map
+export function FetchMapData () {
+	return { cities: game.cities, knownCities: game.knownCities, map: game.map, opponents: game.opponents, playerIndex: game.playerIndex }
 }
 
 export function InitializeSocket (externallyConfiguredSocket) {
@@ -148,7 +148,6 @@ function sendVoiceLine (messageType) {
 	socket.emit('chat_message', game.chatRoom, chosenVoiceLine)
 }
 
-
 function connect () {
 	// Setting the bot name only needs to be done once, ever. See API for more details.
 	// socket.emit('set_username', config.BOT_USER_ID, config.BOT_NAME);
@@ -160,9 +159,9 @@ function disconnect () {
 	document.getElementById("log").append("\nGame disconnected.")
 }
 
-function start (rawData) {
+export function start (rawData) {
   document.getElementById("log").innerHTML = "Game starting..."
-	// Initialize/Re-initialize game state used by both bot and client.
+	// Initialize/Re-initialize default empty game state used by both bot and client.
 	game = {
 		socket,
 		chatRoom: null,
@@ -311,13 +310,21 @@ function update (rawData) {
 	game.turn = rawData.turn
 
 	ai.move()
+
+	// You can only have one socket.on() for each individual event, so we fire off a separate one for the Map to listen to. Passing by reference causes the AI to stall out.
+	document.dispatchEvent(new CustomEvent('MAP_UPDATE', {
+		detail: {
+			// TODO: Return all of the important map data, like cities and generals
+			map: [...game.map]
+		}
+	}))
 }
 
 function lose () {
-	document.getElementById("log").append("\nGame lost...disconnecting.\nClick Join Game to rejoin for a rematch.")
-
 	sendVoiceLine('FAILURE')
 	Quit()
+
+	document.getElementById("log").append("\nGame lost...disconnecting.\nClick Join Game to rejoin for a rematch.")
 }
 
 function win () {
